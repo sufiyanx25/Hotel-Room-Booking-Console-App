@@ -1,0 +1,54 @@
+# Compiled Java class files
+*.class
+
+# Log files
+*.log
+
+# Package Files (optional)
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# IDE Metadata
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+gen/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbproject/jdk.xml
+
+# VS Code
+.vscode/
+
+# OS specific files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# App-specific runtime outputs (except the structures themselves)
+/outputs/*
+!/outputs/.gitkeep
+/data/*
+!/data/.gitkeep
+/screenshots/*
+!/screenshots/.gitkeep
