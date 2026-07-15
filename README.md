@@ -441,9 +441,10 @@ By building and studying this project you will develop skills in:
 
 ## 👤 Author
 
-- **Your Name** — *Computer Science Student / Aspiring Java Developer*
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [linkedin.com/in/your-profile](https://linkedin.com/in/your-profile)
+- **Your Name** — Sufiyan Mangalgatti
+- GitHub: https://github.com/sufiyanx25
+- LinkedIn: www.linkedin.com/in/sufiyan-mangalgatti-73115a386
+
 
 ---
 
