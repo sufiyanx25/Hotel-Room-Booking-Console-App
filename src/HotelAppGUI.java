@@ -1,1014 +1,1210 @@
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
+import javax.swing.border.*;
+import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
+import java.awt.geom.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Vector;
 
 /**
- * Java Swing GUI version of the Hotel Room Booking App.
- * Reuses the domain logic, entities, and collections of HotelApp directly.
+ * HotelAppGUI — Colorful Professional Dashboard GUI
+ * Reuses all business logic from HotelApp.java.
+ * Design: Deep Navy sidebar + Amber accent + Light gray content area.
  */
 public class HotelAppGUI extends JFrame {
 
-    // Reuse the backend engine directly
+    // ─── Backend ──────────────────────────────────────────────────────────────
     private final HotelApp backend = new HotelApp();
 
-    // UI Styles
-    private final Color COLOR_BG = new Color(245, 245, 247);       // Apple light gray
-    private final Color COLOR_CARD = new Color(255, 255, 255);     // Plain white panel
-    private final Color COLOR_ACCENT = new Color(0, 122, 255);     // Apple iOS blue
-    private final Color COLOR_TEXT = new Color(28, 28, 30);        // Dark gray text
-    private final Color COLOR_SECONDARY = new Color(142, 142, 147);// Gray text
-    private final Color COLOR_BORDER = new Color(229, 229, 234);   // Light gray line border
-    private final Color COLOR_ERROR = new Color(255, 59, 48);      // Soft Red
-    private final Color COLOR_SUCCESS = new Color(52, 199, 89);    // Soft Green
+    // ─── Color Palette ────────────────────────────────────────────────────────
+    static final Color C_NAVY        = new Color(0x1A2B4A);  // Sidebar primary
+    static final Color C_NAVY_DARK   = new Color(0x111E35);  // Sidebar gradient end
+    static final Color C_NAVY_HOVER  = new Color(0x253A5E);  // Nav item hover
+    static final Color C_AMBER       = new Color(0xF59E0B);  // Accent / buttons
+    static final Color C_AMBER_DARK  = new Color(0xD97706);  // Accent hover
+    static final Color C_BG          = new Color(0xF0F2F5);  // Page background
+    static final Color C_CARD        = Color.WHITE;           // Card surfaces
+    static final Color C_TEXT        = new Color(0x1A1A2E);  // Primary text
+    static final Color C_MUTED       = new Color(0x6B7280);  // Secondary text
+    static final Color C_BORDER      = new Color(0xE5E7EB);  // Card borders
+    static final Color C_VACANT      = new Color(0x10B981);  // Emerald green
+    static final Color C_OCCUPIED    = new Color(0xEF4444);  // Coral red
+    static final Color C_OOS         = new Color(0x9CA3AF);  // Gray out-of-service
+    static final Color C_PILL_SINGLE = new Color(0x3B82F6);  // Blue — Single rooms
+    static final Color C_PILL_DOUBLE = new Color(0x8B5CF6);  // Purple — Double rooms
+    static final Color C_PILL_SUITE  = new Color(0xF59E0B);  // Amber — Suite rooms
 
-    private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 24);
-    private final Font FONT_SUBTITLE = new Font("Segoe UI", Font.PLAIN, 14);
-    private final Font FONT_LABEL = new Font("Segoe UI", Font.BOLD, 13);
-    private final Font FONT_INPUT = new Font("Segoe UI", Font.PLAIN, 14);
+    // ─── Fonts ────────────────────────────────────────────────────────────────
+    static final Font F_HEADING  = new Font("Segoe UI", Font.BOLD, 22);
+    static final Font F_SUBHEAD  = new Font("Segoe UI", Font.BOLD, 15);
+    static final Font F_BODY     = new Font("Segoe UI", Font.PLAIN, 13);
+    static final Font F_SMALL    = new Font("Segoe UI", Font.PLAIN, 11);
+    static final Font F_NAV      = new Font("Segoe UI", Font.PLAIN, 13);
+    static final Font F_BTN      = new Font("Segoe UI", Font.BOLD, 13);
+    static final Font F_RECEIPT  = new Font("Segoe UI", Font.PLAIN, 13);
 
-    // Card Layout Container
+    // ─── Layout ───────────────────────────────────────────────────────────────
     private final CardLayout cardLayout = new CardLayout();
-    private final JPanel containerPanel = new JPanel(cardLayout);
+    private final JPanel     contentArea = new JPanel(cardLayout);
+    private final String[] SCREENS = {
+            "DASHBOARD","ROOMS","SEARCH","NEW_BOOKING","MANAGE"
+    };
+    private NavButton activeNav = null;
 
-    // Dynamic Components for View Rooms
+    // ─── Dynamic Models ───────────────────────────────────────────────────────
     private DefaultTableModel modelRooms;
+    private DefaultTableModel modelSearch;
 
+    // ─── Constructor ──────────────────────────────────────────────────────────
     public HotelAppGUI() {
-        // Initialize backend and seed sample data
         backend.seedSampleRooms();
 
-        // Setup Frame Settings
-        setTitle("Hotel Starlight Management System");
-        setSize(900, 680);
+        setTitle("Hotel Starlight  —  Management System");
+        setSize(1050, 710);
+        setMinimumSize(new Dimension(900, 640));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        getContentPane().setBackground(COLOR_BG);
 
-        // Add Screens to Container
-        containerPanel.add(createDashboardPanel(), "DASHBOARD");
-        containerPanel.add(createViewRoomsPanel(), "VIEW_ROOMS");
-        containerPanel.add(createSearchPanel(), "SEARCH_ROOMS");
-        containerPanel.add(createNewBookingPanel(), "NEW_BOOKING");
-        containerPanel.add(createManageBookingPanel(), "MANAGE_BOOKING");
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.add(buildSidebar(), BorderLayout.WEST);
 
-        add(containerPanel);
-        cardLayout.show(containerPanel, "DASHBOARD");
+        contentArea.setBackground(C_BG);
+        contentArea.add(buildDashboard(),   "DASHBOARD");
+        contentArea.add(buildRoomsPanel(),  "ROOMS");
+        contentArea.add(buildSearchPanel(), "SEARCH");
+        contentArea.add(buildNewBookingPanel(), "NEW_BOOKING");
+        contentArea.add(buildManagePanel(), "MANAGE");
+        root.add(contentArea, BorderLayout.CENTER);
+
+        setContentPane(root);
+        showScreen("DASHBOARD");
     }
 
-    // Helper to format currency
-    private String formatMoney(BigDecimal amount) {
-        return backend.money(amount);
+    // ─── Navigation ───────────────────────────────────────────────────────────
+    private void showScreen(String name) {
+        cardLayout.show(contentArea, name);
+        if (name.equals("ROOMS")) refreshRoomTable();
     }
 
-    // ----------- Styling Helpers -----------
-    private JButton createPrimaryButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setForeground(Color.WHITE);
-        btn.setBackground(COLOR_ACCENT);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(true);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
-        btn.addMouseListener(new MouseAdapter() {
+    // ═════════════════════════════════════════════════════════════════════════
+    // SIDEBAR
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildSidebar() {
+        // Gradient sidebar using custom paint
+        JPanel sidebar = new JPanel(new BorderLayout()) {
             @Override
-            public void mouseEntered(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(new Color(0, 102, 220));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(COLOR_ACCENT);
-            }
-        });
-        return btn;
-    }
-
-    private JButton createSecondaryButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        btn.setForeground(COLOR_TEXT);
-        btn.setBackground(new Color(229, 229, 234));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(true);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(new Color(209, 209, 214));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (btn.isEnabled()) btn.setBackground(new Color(229, 229, 234));
-            }
-        });
-        return btn;
-    }
-
-    private JTextField createStyledTextField(String placeholder) {
-        JTextField f = new JTextField();
-        f.setFont(FONT_INPUT);
-        f.setForeground(COLOR_TEXT);
-        f.setBackground(Color.WHITE);
-        f.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        return f;
-    }
-
-    private JTable createStyledTable(DefaultTableModel model) {
-        JTable table = new JTable(model) {
-            @Override
-            public boolean isCellEditable(int row, int col) { return false; }
-        };
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setRowHeight(36);
-        table.setGridColor(COLOR_BORDER);
-        table.setShowHorizontalLines(true);
-        table.setShowVerticalLines(false);
-        table.setBackground(Color.WHITE);
-        table.setSelectionBackground(new Color(0, 122, 255, 30));
-        table.setSelectionForeground(COLOR_TEXT);
-
-        JTableHeader header = table.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        header.setBackground(new Color(245, 245, 247));
-        header.setForeground(COLOR_TEXT);
-        header.setReorderingAllowed(false);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, COLOR_BORDER));
-
-        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean isSel, boolean hasFoc, int row, int col) {
-                Component c = super.getTableCellRendererComponent(t, val, isSel, hasFoc, row, col);
-                setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
-                if (!isSel) {
-                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(250, 250, 252));
-                }
-                if (col == 2) { // Status column
-                    String s = String.valueOf(val);
-                    if ("VACANT".equals(s)) {
-                        c.setForeground(COLOR_SUCCESS);
-                    } else if ("OCCUPIED".equals(s)) {
-                        c.setForeground(COLOR_ERROR);
-                    } else {
-                        c.setForeground(COLOR_SECONDARY);
-                    }
-                    setFont(new Font("Segoe UI", Font.BOLD, 13));
-                } else {
-                    c.setForeground(COLOR_TEXT);
-                    setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                }
-                return c;
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setPaint(new GradientPaint(0, 0, C_NAVY, 0, getHeight(), C_NAVY_DARK));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
             }
         };
-        table.setDefaultRenderer(Object.class, renderer);
-        return table;
-    }
+        sidebar.setPreferredSize(new Dimension(220, 0));
+        sidebar.setOpaque(false);
 
-    private JPanel createHeaderPanel(String title, String tagline, String backCard) {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setBackground(COLOR_BG);
-        p.setBorder(new EmptyBorder(25, 40, 15, 40));
+        // Logo / App Name
+        JPanel logoPanel = new JPanel();
+        logoPanel.setOpaque(false);
+        logoPanel.setBorder(new EmptyBorder(28, 20, 20, 20));
+        logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.Y_AXIS));
 
-        JPanel textPanel = new JPanel(new GridLayout(2, 1, 2, 2));
-        textPanel.setBackground(COLOR_BG);
+        JLabel logoIcon = new JLabel("🏨");
+        logoIcon.setFont(new Font("Segoe UI", Font.PLAIN, 32));
+        logoIcon.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.add(logoIcon);
+        logoPanel.add(Box.createVerticalStrut(6));
 
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(FONT_HEADER);
-        titleLbl.setForeground(COLOR_TEXT);
-        textPanel.add(titleLbl);
+        JLabel appName = new JLabel("Hotel Starlight");
+        appName.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        appName.setForeground(Color.WHITE);
+        appName.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.add(appName);
 
-        JLabel tagLbl = new JLabel(tagline);
-        tagLbl.setFont(FONT_SUBTITLE);
-        tagLbl.setForeground(COLOR_SECONDARY);
-        textPanel.add(tagLbl);
+        JLabel tagline = new JLabel("Management System");
+        tagline.setFont(F_SMALL);
+        tagline.setForeground(new Color(0xA0AEC0));
+        tagline.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoPanel.add(tagline);
 
-        p.add(textPanel, BorderLayout.WEST);
+        sidebar.add(logoPanel, BorderLayout.NORTH);
 
-        if (backCard != null) {
-            JButton backBtn = createSecondaryButton("Back to Menu");
-            backBtn.addActionListener(e -> cardLayout.show(containerPanel, backCard));
-            JPanel btnWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 10));
-            btnWrapper.setBackground(COLOR_BG);
-            btnWrapper.add(backBtn);
-            p.add(btnWrapper, BorderLayout.EAST);
+        // Nav Items
+        JPanel navPanel = new JPanel();
+        navPanel.setOpaque(false);
+        navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
+        navPanel.setBorder(new EmptyBorder(10, 12, 10, 12));
+
+        JLabel sectionLbl = new JLabel("NAVIGATION");
+        sectionLbl.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        sectionLbl.setForeground(new Color(0x718096));
+        sectionLbl.setBorder(new EmptyBorder(0, 8, 8, 0));
+        navPanel.add(sectionLbl);
+
+        NavButton btnDash   = new NavButton("⬛  Dashboard",     "DASHBOARD");
+        NavButton btnRooms  = new NavButton("🏠  View Rooms",    "ROOMS");
+        NavButton btnSearch = new NavButton("🔍  Search Rooms",  "SEARCH");
+        NavButton btnNew    = new NavButton("➕  New Booking",   "NEW_BOOKING");
+        NavButton btnManage = new NavButton("⚙   Manage Booking","MANAGE");
+
+        for (NavButton nb : new NavButton[]{btnDash, btnRooms, btnSearch, btnNew, btnManage}) {
+            nb.addActionListener(e -> {
+                setActive(nb);
+                showScreen(nb.screen);
+            });
+            navPanel.add(nb);
+            navPanel.add(Box.createVerticalStrut(4));
         }
-        return p;
-    }
+        setActive(btnDash);
+        sidebar.add(navPanel, BorderLayout.CENTER);
 
-    // ----------- Screen 1: Dashboard Panel -----------
-    private JPanel createDashboardPanel() {
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(COLOR_BG);
+        // Exit at bottom
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setOpaque(false);
+        bottomPanel.setBorder(new EmptyBorder(0, 12, 24, 12));
+        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
 
-        // Header Panel
-        root.add(createHeaderPanel("Hotel Starlight Management", "Select a task option below to manage operations", null), BorderLayout.NORTH);
+        JSeparator sep = new JSeparator();
+        sep.setForeground(new Color(0x2D4A6B));
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        bottomPanel.add(sep);
+        bottomPanel.add(Box.createVerticalStrut(12));
 
-        // Grid Menu Container
-        JPanel gridPanel = new JPanel(new GridLayout(2, 4, 20, 20));
-        gridPanel.setBackground(COLOR_BG);
-        gridPanel.setBorder(new EmptyBorder(20, 40, 40, 40));
-
-        JButton btnViewRooms = createMenuCard("View Room Grid", "List and check real-time hotel room status.", "🏨");
-        btnViewRooms.addActionListener(e -> {
-            refreshRoomsData();
-            cardLayout.show(containerPanel, "VIEW_ROOMS");
-        });
-        gridPanel.add(btnViewRooms);
-
-        JButton btnSearch = createMenuCard("Search Vacancy", "Find available rooms by date and category.", "🔍");
-        btnSearch.addActionListener(e -> cardLayout.show(containerPanel, "SEARCH_ROOMS"));
-        gridPanel.add(btnSearch);
-
-        JButton btnBook = createMenuCard("New Booking", "Create a reservation for checking in guests.", "➕");
-        btnBook.addActionListener(e -> cardLayout.show(containerPanel, "NEW_BOOKING"));
-        gridPanel.add(btnBook);
-
-        JButton btnManage = createMenuCard("Manage Bookings", "View, check-in, check-out, or cancel bookings.", "⚙️");
-        btnManage.addActionListener(e -> cardLayout.show(containerPanel, "MANAGE_BOOKING"));
-        gridPanel.add(btnManage);
-
-        root.add(gridPanel, BorderLayout.CENTER);
-
-        // Exit / Info footer
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setBackground(COLOR_BG);
-        footer.setBorder(new EmptyBorder(0, 40, 30, 40));
-
-        JButton btnExit = createSecondaryButton("Exit Application");
+        NavButton btnExit = new NavButton("🚪  Exit", null);
         btnExit.addActionListener(e -> System.exit(0));
-        footer.add(btnExit, BorderLayout.WEST);
+        bottomPanel.add(btnExit);
 
-        JLabel verLbl = new JLabel("Application Version 1.1.0 LTS  |  JDK 25 SE");
-        verLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        verLbl.setForeground(COLOR_SECONDARY);
-        footer.add(verLbl, BorderLayout.EAST);
+        sidebar.add(bottomPanel, BorderLayout.SOUTH);
+        return sidebar;
+    }
 
-        root.add(footer, BorderLayout.SOUTH);
+    private void setActive(NavButton btn) {
+        if (activeNav != null) activeNav.setActive(false);
+        activeNav = btn;
+        btn.setActive(true);
+    }
+
+    // ─── Custom Nav Button ─────────────────────────────────────────────────
+    class NavButton extends JButton {
+        final String screen;
+        private boolean isActive = false;
+
+        NavButton(String text, String screen) {
+            super(text);
+            this.screen = screen;
+            setFont(F_NAV);
+            setForeground(new Color(0xCBD5E0));
+            setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setHorizontalAlignment(SwingConstants.LEFT);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setBorder(new EmptyBorder(10, 12, 10, 12));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) {
+                    if (!isActive) setForeground(Color.WHITE);
+                }
+                @Override public void mouseExited(MouseEvent e) {
+                    if (!isActive) setForeground(new Color(0xCBD5E0));
+                }
+            });
+        }
+
+        void setActive(boolean active) {
+            this.isActive = active;
+            setForeground(active ? C_AMBER : new Color(0xCBD5E0));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            if (isActive) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0xF59E0B, false) {
+                    { /* Transparent amber background */ }
+                });
+                g2.setColor(new Color(245, 158, 11, 25));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+
+                // Accent left bar
+                g2.setColor(C_AMBER);
+                g2.fillRoundRect(0, 6, 3, getHeight() - 12, 3, 3);
+                g2.dispose();
+            }
+            super.paintComponent(g);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCREEN 1 — DASHBOARD
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildDashboard() {
+        JPanel root = screenWrapper();
+
+        // Header
+        root.add(pageHeader("Welcome back! 👋", "Manage your hotel operations from one place."), BorderLayout.NORTH);
+
+        JPanel body = new JPanel();
+        body.setOpaque(false);
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setBorder(new EmptyBorder(0, 32, 32, 32));
+
+        // ── Stat Cards Row ──
+        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        statsRow.setOpaque(false);
+        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+
+        long totalRooms    = backend.rooms.size();
+        long vacantRooms   = backend.rooms.values().stream()
+                .filter(r -> r.status == HotelApp.RoomStatus.VACANT).count();
+        long occupiedRooms = backend.rooms.values().stream()
+                .filter(r -> r.status == HotelApp.RoomStatus.OCCUPIED).count();
+
+        statsRow.add(statCard("🏠", "Total Rooms",    String.valueOf(totalRooms),    C_NAVY));
+        statsRow.add(statCard("✅", "Rooms Vacant",   String.valueOf(vacantRooms),   C_VACANT));
+        statsRow.add(statCard("🔴", "Rooms Occupied", String.valueOf(occupiedRooms), C_OCCUPIED));
+
+        body.add(Box.createVerticalStrut(8));
+        body.add(statsRow);
+        body.add(Box.createVerticalStrut(28));
+
+        // ── Quick Action Label ──
+        JLabel quickLbl = new JLabel("Quick Actions");
+        quickLbl.setFont(F_SUBHEAD);
+        quickLbl.setForeground(C_TEXT);
+        quickLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(quickLbl);
+        body.add(Box.createVerticalStrut(12));
+
+        // ── Quick Action Cards ──
+        JPanel actionRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        actionRow.setOpaque(false);
+        actionRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+        actionRow.add(quickAction("🔍", "Search Rooms",   "Check room availability by date",    () -> { showScreen("SEARCH");      if(activeNav!=null){/*update nav*/}}));
+        actionRow.add(quickAction("➕", "New Booking",    "Reserve a room for a guest",          () -> showScreen("NEW_BOOKING")));
+        actionRow.add(quickAction("⚙",  "Manage Booking", "Check-in, check-out, or cancel",      () -> showScreen("MANAGE")));
+
+        body.add(actionRow);
+
+        root.add(body, BorderLayout.CENTER);
         return root;
     }
 
-    private JButton createMenuCard(String title, String desc, String icon) {
-        JButton btn = new JButton();
-        btn.setLayout(new BorderLayout(5, 5));
-        btn.setBackground(COLOR_CARD);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(true);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+    private JPanel statCard(String icon, String label, String value, Color accent) {
+        JPanel card = card();
+        card.setLayout(new BorderLayout(10, 0));
+
+        JPanel left = new JPanel(new GridLayout(3, 1, 2, 2));
+        left.setOpaque(false);
+        left.setBorder(new EmptyBorder(16, 20, 16, 0));
+
+        JLabel icn = new JLabel(icon);
+        icn.setFont(new Font("Segoe UI", Font.PLAIN, 26));
+        left.add(icn);
+
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(F_SMALL);
+        lbl.setForeground(C_MUTED);
+        left.add(lbl);
+
+        JLabel val = new JLabel(value);
+        val.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        val.setForeground(accent);
+        left.add(val);
+
+        card.add(left, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel quickAction(String icon, String title, String desc, Runnable action) {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setBackground(C_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C_BORDER, 1, true),
+                new EmptyBorder(16, 16, 16, 16)
         ));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        JLabel iconLbl = new JLabel(icon);
-        iconLbl.setFont(new Font("Segoe UI", Font.PLAIN, 36));
-        iconLbl.setBorder(new EmptyBorder(0, 0, 10, 0));
-        btn.add(iconLbl, BorderLayout.NORTH);
+        JLabel icnLbl = new JLabel(icon);
+        icnLbl.setFont(new Font("Segoe UI", Font.PLAIN, 24));
+        card.add(icnLbl, BorderLayout.WEST);
 
-        JPanel textPanel = new JPanel(new GridLayout(2, 1, 2, 2));
-        textPanel.setBackground(COLOR_CARD);
+        JPanel txt = new JPanel(new GridLayout(2, 1, 2, 2));
+        txt.setOpaque(false);
+        JLabel t = new JLabel(title);
+        t.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        t.setForeground(C_TEXT);
+        JLabel d = new JLabel(desc);
+        d.setFont(F_SMALL);
+        d.setForeground(C_MUTED);
+        txt.add(t); txt.add(d);
+        card.add(txt, BorderLayout.CENTER);
 
-        JLabel titleLbl = new JLabel(title);
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLbl.setForeground(COLOR_TEXT);
-        textPanel.add(titleLbl);
-
-        JLabel descLbl = new JLabel("<html><body style='width: 140px;'>" + desc + "</body></html>");
-        descLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        descLbl.setForeground(COLOR_SECONDARY);
-        textPanel.add(descLbl);
-
-        btn.add(textPanel, BorderLayout.CENTER);
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setBackground(new Color(250, 250, 252));
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(COLOR_ACCENT, 1),
-                        BorderFactory.createEmptyBorder(20, 20, 20, 20)
-                ));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setBackground(COLOR_CARD);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                        BorderFactory.createEmptyBorder(20, 20, 20, 20)
-                ));
-            }
+        card.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { card.setBackground(new Color(0xFFFBEB)); }
+            @Override public void mouseExited(MouseEvent e)  { card.setBackground(C_CARD); }
+            @Override public void mouseClicked(MouseEvent e) { action.run(); }
         });
-        return btn;
+        return card;
     }
 
-    // ----------- Screen 2: View Rooms Panel -----------
-    private JPanel createViewRoomsPanel() {
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(COLOR_BG);
-        root.add(createHeaderPanel("Rooms Inventory", "Live status updates of room occupation", "DASHBOARD"), BorderLayout.NORTH);
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCREEN 2 — VIEW ROOMS
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildRoomsPanel() {
+        JPanel root = screenWrapper();
+        root.add(pageHeader("Room Inventory", "Live status of all 10 hotel rooms."), BorderLayout.NORTH);
 
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(COLOR_BG);
-        wrapper.setBorder(new EmptyBorder(10, 40, 40, 40));
+        JPanel body = new JPanel(new BorderLayout());
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(0, 32, 32, 32));
 
-        // JTable Configuration
-        modelRooms = new DefaultTableModel(new String[]{"Room Number", "Category Type", "Current Status", "Base Price / Night"}, 0);
-        JTable table = createStyledTable(modelRooms);
+        modelRooms = new DefaultTableModel(
+                new String[]{"  Room No.", "  Room Type", "  Status", "  Rate / Night"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
 
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setBorder(BorderFactory.createLineBorder(COLOR_BORDER, 1));
-        scroll.getViewport().setBackground(Color.WHITE);
-        wrapper.add(scroll, BorderLayout.CENTER);
+        JTable table = styledTable(modelRooms);
+        // Custom renderer for status and type pills
+        table.getColumnModel().getColumn(1).setCellRenderer(new TypePillRenderer());
+        table.getColumnModel().getColumn(2).setCellRenderer(new StatusPillRenderer());
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(1).setPreferredWidth(130);
+        table.getColumnModel().getColumn(2).setPreferredWidth(130);
+        table.getColumnModel().getColumn(3).setPreferredWidth(140);
 
-        root.add(wrapper, BorderLayout.CENTER);
+        JScrollPane scroll = styledScroll(table);
+        JPanel card = card();
+        card.setLayout(new BorderLayout());
+        card.add(scroll, BorderLayout.CENTER);
+
+        body.add(card, BorderLayout.CENTER);
+        root.add(body, BorderLayout.CENTER);
         return root;
     }
 
-    private void refreshRoomsData() {
+    private void refreshRoomTable() {
+        if (modelRooms == null) return;
         modelRooms.setRowCount(0);
         for (HotelApp.Room r : backend.rooms.values()) {
             modelRooms.addRow(new Object[]{
-                    r.number,
+                    "  " + r.number,
                     r.type.label,
                     r.status.name(),
-                    formatMoney(r.type.nightlyRate())
+                    "  " + backend.money(r.type.nightlyRate())
             });
         }
     }
 
-    // ----------- Screen 3: Search Panel -----------
-    private JPanel createSearchPanel() {
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(COLOR_BG);
-        root.add(createHeaderPanel("Search Available Rooms", "Query vacant rooms directly using custom date inputs", "DASHBOARD"), BorderLayout.NORTH);
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCREEN 3 — SEARCH AVAILABILITY
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildSearchPanel() {
+        JPanel root = screenWrapper();
+        root.add(pageHeader("Search Availability", "Find vacant rooms for specific dates and room type."), BorderLayout.NORTH);
 
-        JPanel content = new JPanel(new BorderLayout(20, 20));
-        content.setBackground(COLOR_BG);
-        content.setBorder(new EmptyBorder(10, 40, 40, 40));
+        JPanel body = new JPanel(new BorderLayout(20, 0));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(0, 32, 32, 32));
 
-        // Form Inputs Card (Left)
-        JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(COLOR_CARD);
-        formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        formCard.setPreferredSize(new Dimension(320, 400));
+        // ── Left form card ──
+        JPanel formCard = card();
+        formCard.setLayout(new BoxLayout(formCard, BoxLayout.Y_AXIS));
+        formCard.setPreferredSize(new Dimension(300, 0));
+        formCard.setBorder(new CompoundBorder(formCard.getBorder(), new EmptyBorder(24, 24, 24, 24)));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 15, 0);
+        formCard.add(sectionLabel("Room Type"));
+        formCard.add(Box.createVerticalStrut(6));
+        JComboBox<HotelApp.RoomType> cboType = styledCombo(HotelApp.RoomType.values());
+        cboType.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(cboType);
 
-        // Room Type
-        JLabel lblType = new JLabel("Room Category");
-        lblType.setFont(FONT_LABEL);
-        lblType.setForeground(COLOR_TEXT);
-        formCard.add(lblType, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        formCard.add(sectionLabel("Check-In Date  (yyyy-MM-dd)"));
+        formCard.add(Box.createVerticalStrut(6));
+        JTextField txtIn = styledField(LocalDate.now().toString());
+        txtIn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(txtIn);
 
-        gbc.gridy++;
-        JComboBox<HotelApp.RoomType> comboType = new JComboBox<>(HotelApp.RoomType.values());
-        comboType.setFont(FONT_INPUT);
-        comboType.setBackground(Color.WHITE);
-        formCard.add(comboType, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        formCard.add(sectionLabel("Check-Out Date  (yyyy-MM-dd)"));
+        formCard.add(Box.createVerticalStrut(6));
+        JTextField txtOut = styledField(LocalDate.now().plusDays(1).toString());
+        txtOut.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(txtOut);
 
-        // Check In
-        gbc.gridy++;
-        JLabel lblCheckIn = new JLabel("Check-In Date (yyyy-MM-dd)");
-        lblCheckIn.setFont(FONT_LABEL);
-        lblCheckIn.setForeground(COLOR_TEXT);
-        formCard.add(lblCheckIn, gbc);
+        formCard.add(Box.createVerticalStrut(8));
+        JLabel errLbl = errorLabel();
+        formCard.add(errLbl);
 
-        gbc.gridy++;
-        JTextField txtCheckIn = createStyledTextField("yyyy-MM-dd");
-        txtCheckIn.setText(LocalDate.now().toString());
-        formCard.add(txtCheckIn, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        JButton btnSearch = accentButton("🔍  Search Rooms");
+        btnSearch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnSearch.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formCard.add(btnSearch);
+        formCard.add(Box.createVerticalGlue());
 
-        // Check Out
-        gbc.gridy++;
-        JLabel lblCheckOut = new JLabel("Check-Out Date (yyyy-MM-dd)");
-        lblCheckOut.setFont(FONT_LABEL);
-        lblCheckOut.setForeground(COLOR_TEXT);
-        formCard.add(lblCheckOut, gbc);
+        // ── Right results card ──
+        JPanel resultsCard = card();
+        resultsCard.setLayout(new BorderLayout());
 
-        gbc.gridy++;
-        JTextField txtCheckOut = createStyledTextField("yyyy-MM-dd");
-        txtCheckOut.setText(LocalDate.now().plusDays(1).toString());
-        formCard.add(txtCheckOut, gbc);
+        modelSearch = new DefaultTableModel(
+                new String[]{"  Room No.", "  Room Type", "  Rate / Night"}, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable tResults = styledTable(modelSearch);
+        tResults.getColumnModel().getColumn(1).setCellRenderer(new TypePillRenderer());
+        resultsCard.add(styledScroll(tResults), BorderLayout.CENTER);
 
-        // Error message label
-        gbc.gridy++;
-        JLabel lblErr = new JLabel();
-        lblErr.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblErr.setForeground(COLOR_ERROR);
-        formCard.add(lblErr, gbc);
+        JLabel resultsHdr = new JLabel("  Available Rooms");
+        resultsHdr.setFont(F_SUBHEAD);
+        resultsHdr.setForeground(C_TEXT);
+        resultsHdr.setBorder(new EmptyBorder(14, 16, 14, 0));
+        resultsCard.add(resultsHdr, BorderLayout.NORTH);
 
-        // Search Button
-        gbc.gridy++;
-        gbc.insets = new Insets(10, 0, 0, 0);
-        JButton btnSearch = createPrimaryButton("Find Available Rooms");
-        formCard.add(btnSearch, gbc);
+        body.add(formCard,   BorderLayout.WEST);
+        body.add(resultsCard, BorderLayout.CENTER);
+        root.add(body, BorderLayout.CENTER);
 
-        content.add(formCard, BorderLayout.WEST);
-
-        // Results Card (Right)
-        JPanel resultsCard = new JPanel(new BorderLayout());
-        resultsCard.setBackground(COLOR_CARD);
-        resultsCard.setBorder(BorderFactory.createLineBorder(COLOR_BORDER, 1));
-
-        DefaultTableModel modelResults = new DefaultTableModel(new String[]{"Room Number", "Room Type", "Nightly Rate"}, 0);
-        JTable tableResults = createStyledTable(modelResults);
-        JScrollPane scrollResults = new JScrollPane(tableResults);
-        scrollResults.setBorder(BorderFactory.createEmptyBorder());
-        scrollResults.getViewport().setBackground(Color.WHITE);
-
-        resultsCard.add(scrollResults, BorderLayout.CENTER);
-        content.add(resultsCard, BorderLayout.CENTER);
-
-        root.add(content, BorderLayout.CENTER);
-
-        // Search Trigger
         btnSearch.addActionListener(e -> {
-            lblErr.setText("");
-            modelResults.setRowCount(0);
+            errLbl.setText(" ");
+            modelSearch.setRowCount(0);
             try {
-                HotelApp.RoomType rt = (HotelApp.RoomType) comboType.getSelectedItem();
-                LocalDate inDate = LocalDate.parse(txtCheckIn.getText().trim(), HotelApp.DTF);
-                LocalDate outDate = LocalDate.parse(txtCheckOut.getText().trim(), HotelApp.DTF);
-
-                if (!backend.validateDates(inDate, outDate)) {
-                    lblErr.setText("Check-out must be after check-in.");
-                    return;
+                HotelApp.RoomType rt = (HotelApp.RoomType) cboType.getSelectedItem();
+                LocalDate in  = LocalDate.parse(txtIn.getText().trim(),  HotelApp.DTF);
+                LocalDate out = LocalDate.parse(txtOut.getText().trim(), HotelApp.DTF);
+                if (!backend.validateDates(in, out)) { errLbl.setText("Check-out must be after check-in."); return; }
+                List<HotelApp.Room> avail = backend.findAvailableRooms(rt, in, out);
+                if (avail.isEmpty()) { errLbl.setText("No rooms available for those dates."); return; }
+                for (HotelApp.Room r : avail) {
+                    modelSearch.addRow(new Object[]{"  " + r.number, r.type.label, "  " + backend.money(r.type.nightlyRate())});
                 }
-
-                List<HotelApp.Room> available = backend.findAvailableRooms(rt, inDate, outDate);
-                if (available.isEmpty()) {
-                    lblErr.setText("No vacancy for specified inputs.");
-                } else {
-                    for (HotelApp.Room r : available) {
-                        modelResults.addRow(new Object[]{r.number, r.type.label, formatMoney(r.type.nightlyRate())});
-                    }
-                }
-            } catch (DateTimeParseException ex) {
-                lblErr.setText("Use date format: yyyy-MM-dd");
-            }
+            } catch (DateTimeParseException ex) { errLbl.setText("Use date format: yyyy-MM-dd"); }
         });
 
         return root;
     }
 
-    // ----------- Screen 4: New Booking Panel -----------
-    private JPanel createNewBookingPanel() {
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(COLOR_BG);
-        root.add(createHeaderPanel("New Reservation Entry", "Reserve rooms by entering dates, types, and choosing numbers", "DASHBOARD"), BorderLayout.NORTH);
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCREEN 4 — NEW BOOKING
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildNewBookingPanel() {
+        JPanel root = screenWrapper();
+        root.add(pageHeader("New Booking", "Reserve a room for your guest."), BorderLayout.NORTH);
 
-        JPanel content = new JPanel(new BorderLayout(20, 20));
-        content.setBackground(COLOR_BG);
-        content.setBorder(new EmptyBorder(10, 40, 40, 40));
+        JPanel body = new JPanel(new BorderLayout(20, 0));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(0, 32, 32, 32));
 
-        // Form panel (Left)
-        JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(COLOR_CARD);
-        formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        formCard.setPreferredSize(new Dimension(340, 500));
+        // ── Form Card ──
+        JPanel formCard = card();
+        formCard.setLayout(new BoxLayout(formCard, BoxLayout.Y_AXIS));
+        formCard.setPreferredSize(new Dimension(310, 0));
+        formCard.setBorder(new CompoundBorder(formCard.getBorder(), new EmptyBorder(24, 24, 24, 24)));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 10, 0);
+        formCard.add(sectionLabel("Guest Full Name"));
+        formCard.add(Box.createVerticalStrut(6));
+        JTextField txtGuest = styledField("e.g. John Doe");
+        txtGuest.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(txtGuest);
 
-        // Guest Name
-        JLabel lblGuest = new JLabel("Guest Full Name");
-        lblGuest.setFont(FONT_LABEL);
-        lblGuest.setForeground(COLOR_TEXT);
-        formCard.add(lblGuest, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        formCard.add(sectionLabel("Room Category"));
+        formCard.add(Box.createVerticalStrut(6));
+        JComboBox<HotelApp.RoomType> cboType = styledCombo(HotelApp.RoomType.values());
+        cboType.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(cboType);
 
-        gbc.gridy++;
-        JTextField txtGuest = createStyledTextField("John Doe");
-        formCard.add(txtGuest, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        formCard.add(sectionLabel("Check-In Date  (yyyy-MM-dd)"));
+        formCard.add(Box.createVerticalStrut(6));
+        JTextField txtIn = styledField(LocalDate.now().toString());
+        txtIn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(txtIn);
 
-        // Room Type
-        gbc.gridy++;
-        JLabel lblType = new JLabel("Room Category");
-        lblType.setFont(FONT_LABEL);
-        lblType.setForeground(COLOR_TEXT);
-        formCard.add(lblType, gbc);
+        formCard.add(Box.createVerticalStrut(16));
+        formCard.add(sectionLabel("Check-Out Date  (yyyy-MM-dd)"));
+        formCard.add(Box.createVerticalStrut(6));
+        JTextField txtOut = styledField(LocalDate.now().plusDays(1).toString());
+        txtOut.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(txtOut);
 
-        gbc.gridy++;
-        JComboBox<HotelApp.RoomType> comboType = new JComboBox<>(HotelApp.RoomType.values());
-        comboType.setFont(FONT_INPUT);
-        comboType.setBackground(Color.WHITE);
-        formCard.add(comboType, gbc);
+        formCard.add(Box.createVerticalStrut(12));
+        JButton btnFetch = ghostButton("Check Available Rooms");
+        btnFetch.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        btnFetch.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formCard.add(btnFetch);
 
-        // Dates
-        gbc.gridy++;
-        JLabel lblCheckIn = new JLabel("Check-In Date (yyyy-MM-dd)");
-        lblCheckIn.setFont(FONT_LABEL);
-        lblCheckIn.setForeground(COLOR_TEXT);
-        formCard.add(lblCheckIn, gbc);
+        formCard.add(Box.createVerticalStrut(12));
+        formCard.add(sectionLabel("Select Room Number"));
+        formCard.add(Box.createVerticalStrut(6));
+        JComboBox<Integer> cboRooms = new JComboBox<>();
+        cboRooms.setFont(F_BODY);
+        cboRooms.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        formCard.add(cboRooms);
 
-        gbc.gridy++;
-        JTextField txtCheckIn = createStyledTextField("");
-        txtCheckIn.setText(LocalDate.now().toString());
-        formCard.add(txtCheckIn, gbc);
+        formCard.add(Box.createVerticalStrut(8));
+        JLabel errLbl = errorLabel();
+        formCard.add(errLbl);
 
-        gbc.gridy++;
-        JLabel lblCheckOut = new JLabel("Check-Out Date (yyyy-MM-dd)");
-        lblCheckOut.setFont(FONT_LABEL);
-        lblCheckOut.setForeground(COLOR_TEXT);
-        formCard.add(lblCheckOut, gbc);
-
-        gbc.gridy++;
-        JTextField txtCheckOut = createStyledTextField("");
-        txtCheckOut.setText(LocalDate.now().plusDays(1).toString());
-        formCard.add(txtCheckOut, gbc);
-
-        // Query Available rooms button
-        gbc.gridy++;
-        JButton btnCheck = createSecondaryButton("Fetch Available Room Numbers");
-        formCard.add(btnCheck, gbc);
-
-        // Selection combo box
-        gbc.gridy++;
-        JLabel lblRooms = new JLabel("Select Room Number");
-        lblRooms.setFont(FONT_LABEL);
-        lblRooms.setForeground(COLOR_TEXT);
-        formCard.add(lblRooms, gbc);
-
-        gbc.gridy++;
-        JComboBox<Integer> comboRooms = new JComboBox<>();
-        comboRooms.setFont(FONT_INPUT);
-        comboRooms.setBackground(Color.WHITE);
-        formCard.add(comboRooms, gbc);
-
-        // Error message
-        gbc.gridy++;
-        JLabel lblErr = new JLabel();
-        lblErr.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblErr.setForeground(COLOR_ERROR);
-        formCard.add(lblErr, gbc);
-
-        // Confirm Reservation
-        gbc.gridy++;
-        gbc.insets = new Insets(10, 0, 0, 0);
-        JButton btnConfirm = createPrimaryButton("Confirm Booking");
+        formCard.add(Box.createVerticalStrut(12));
+        JButton btnConfirm = accentButton("✅  Confirm Booking");
+        btnConfirm.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         btnConfirm.setEnabled(false);
-        formCard.add(btnConfirm, gbc);
+        btnConfirm.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formCard.add(btnConfirm);
+        formCard.add(Box.createVerticalGlue());
 
-        content.add(formCard, BorderLayout.WEST);
+        // ── Voucher Card ──
+        JPanel voucherCard = card();
+        voucherCard.setLayout(new BorderLayout());
 
-        // Confirmation Card (Right)
-        JPanel cardWrapper = new JPanel(new GridBagLayout());
-        cardWrapper.setBackground(COLOR_BG);
+        JPanel voucherHeader = new JPanel();
+        voucherHeader.setBackground(C_NAVY);
+        voucherHeader.setBorder(new EmptyBorder(18, 20, 18, 20));
+        voucherHeader.setLayout(new BoxLayout(voucherHeader, BoxLayout.Y_AXIS));
 
-        JPanel slipCard = new JPanel(null);
-        slipCard.setBackground(COLOR_CARD);
-        slipCard.setPreferredSize(new Dimension(380, 480));
-        slipCard.setBorder(BorderFactory.createLineBorder(COLOR_BORDER, 1));
-        
-        JLabel lblSlipTitle = new JLabel("RESERVATION VOUCHER", JLabel.CENTER);
-        lblSlipTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblSlipTitle.setBounds(0, 30, 380, 25);
-        slipCard.add(lblSlipTitle);
+        JLabel vTitle = new JLabel("BOOKING CONFIRMATION");
+        vTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        vTitle.setForeground(Color.WHITE);
+        JLabel vSub = new JLabel("Hotel Starlight — Room Reservation");
+        vSub.setFont(F_SMALL);
+        vSub.setForeground(new Color(0xA0AEC0));
+        voucherHeader.add(vTitle);
+        voucherHeader.add(Box.createVerticalStrut(4));
+        voucherHeader.add(vSub);
+        voucherCard.add(voucherHeader, BorderLayout.NORTH);
 
-        JSeparator sep = new JSeparator();
-        sep.setBounds(30, 70, 320, 2);
-        slipCard.add(sep);
+        // Voucher body
+        JPanel vBody = new JPanel();
+        vBody.setBackground(C_CARD);
+        vBody.setLayout(new BoxLayout(vBody, BoxLayout.Y_AXIS));
+        vBody.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        // Layout items inside the voucher card
-        JLabel vBkg = new JLabel("Booking ID:");
-        vBkg.setFont(FONT_LABEL); vBkg.setBounds(40, 90, 100, 20);
-        slipCard.add(vBkg);
-        JLabel valBkg = new JLabel("-");
-        valBkg.setFont(FONT_INPUT); valBkg.setBounds(160, 90, 180, 20);
-        slipCard.add(valBkg);
+        // Voucher data rows
+        JLabel[] vLabels = new JLabel[7];
+        String[] vKeys = {"Booking ID", "Guest Name", "Room No.", "Check-In", "Check-Out", "Nights", ""};
+        JLabel[] vVals  = new JLabel[7];
+        for (int i = 0; i < 6; i++) {
+            JPanel row = new JPanel(new BorderLayout());
+            row.setOpaque(false);
+            row.setBorder(new EmptyBorder(4, 0, 4, 0));
+            vLabels[i] = new JLabel(vKeys[i]);
+            vLabels[i].setFont(F_SMALL);
+            vLabels[i].setForeground(C_MUTED);
+            vVals[i] = new JLabel("—");
+            vVals[i].setFont(F_BODY);
+            vVals[i].setForeground(C_TEXT);
+            row.add(vLabels[i], BorderLayout.WEST);
+            row.add(vVals[i],   BorderLayout.EAST);
+            vBody.add(row);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        }
 
-        JLabel vGuest = new JLabel("Guest Name:");
-        vGuest.setFont(FONT_LABEL); vGuest.setBounds(40, 120, 100, 20);
-        slipCard.add(vGuest);
-        JLabel valGuest = new JLabel("-");
-        valGuest.setFont(FONT_INPUT); valGuest.setBounds(160, 120, 180, 20);
-        slipCard.add(valGuest);
+        // Separator
+        JSeparator hSep = new JSeparator();
+        hSep.setForeground(C_BORDER);
+        hSep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        vBody.add(Box.createVerticalStrut(8));
+        vBody.add(hSep);
+        vBody.add(Box.createVerticalStrut(8));
 
-        JLabel vRoom = new JLabel("Room Selected:");
-        vRoom.setFont(FONT_LABEL); vRoom.setBounds(40, 150, 100, 20);
-        slipCard.add(vRoom);
-        JLabel valRoom = new JLabel("-");
-        valRoom.setFont(FONT_INPUT); valRoom.setBounds(160, 150, 180, 20);
-        slipCard.add(valRoom);
+        // Bill rows
+        String[] billKeys = {"Nightly Rate", "Room Charge", "Tax (10%)"};
+        JLabel[] billVals = new JLabel[3];
+        for (int i = 0; i < 3; i++) {
+            JPanel row = new JPanel(new BorderLayout());
+            row.setOpaque(false);
+            row.setBorder(new EmptyBorder(3, 0, 3, 0));
+            JLabel k = new JLabel(billKeys[i]);
+            k.setFont(F_SMALL);
+            k.setForeground(C_MUTED);
+            billVals[i] = new JLabel("—");
+            billVals[i].setFont(F_BODY);
+            billVals[i].setForeground(C_TEXT);
+            row.add(k,           BorderLayout.WEST);
+            row.add(billVals[i], BorderLayout.EAST);
+            vBody.add(row);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        }
 
-        JLabel vDates = new JLabel("Stay Duration:");
-        vDates.setFont(FONT_LABEL); vDates.setBounds(40, 180, 100, 20);
-        slipCard.add(vDates);
-        JLabel valDates = new JLabel("-");
-        valDates.setFont(FONT_INPUT); valDates.setBounds(160, 180, 180, 20);
-        slipCard.add(valDates);
+        vBody.add(Box.createVerticalStrut(10));
 
-        JLabel vNights = new JLabel("Total Nights:");
-        vNights.setFont(FONT_LABEL); vNights.setBounds(40, 210, 100, 20);
-        slipCard.add(vNights);
-        JLabel valNights = new JLabel("-");
-        valNights.setFont(FONT_INPUT); valNights.setBounds(160, 210, 180, 20);
-        slipCard.add(valNights);
+        // Total row
+        JPanel totalRow = new JPanel(new BorderLayout());
+        totalRow.setBackground(new Color(0xFFFBEB));
+        totalRow.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xFDE68A), 1),
+                new EmptyBorder(10, 14, 10, 14)
+        ));
+        JLabel totalKey = new JLabel("TOTAL AMOUNT");
+        totalKey.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalKey.setForeground(C_NAVY);
+        JLabel totalVal = new JLabel("—");
+        totalVal.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        totalVal.setForeground(C_AMBER);
+        totalRow.add(totalKey, BorderLayout.WEST);
+        totalRow.add(totalVal, BorderLayout.EAST);
+        totalRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        vBody.add(totalRow);
 
-        JSeparator sep2 = new JSeparator();
-        sep2.setBounds(30, 250, 320, 2);
-        slipCard.add(sep2);
+        voucherCard.add(vBody, BorderLayout.CENTER);
 
-        JLabel vRate = new JLabel("Nightly Rate:");
-        vRate.setFont(FONT_LABEL); vRate.setBounds(40, 270, 120, 20);
-        slipCard.add(vRate);
-        JLabel valRate = new JLabel("-");
-        valRate.setFont(FONT_INPUT); valRate.setHorizontalAlignment(JLabel.RIGHT); valRate.setBounds(200, 270, 140, 20);
-        slipCard.add(valRate);
+        body.add(formCard,    BorderLayout.WEST);
+        body.add(voucherCard, BorderLayout.CENTER);
+        root.add(body, BorderLayout.CENTER);
 
-        JLabel vCharge = new JLabel("Room Charge:");
-        vCharge.setFont(FONT_LABEL); vCharge.setBounds(40, 300, 120, 20);
-        slipCard.add(vCharge);
-        JLabel valCharge = new JLabel("-");
-        valCharge.setFont(FONT_INPUT); valCharge.setHorizontalAlignment(JLabel.RIGHT); valCharge.setBounds(200, 300, 140, 20);
-        slipCard.add(valCharge);
-
-        JLabel vTax = new JLabel("Service Tax (10%):");
-        vTax.setFont(FONT_LABEL); vTax.setBounds(40, 330, 120, 20);
-        slipCard.add(vTax);
-        JLabel valTax = new JLabel("-");
-        valTax.setFont(FONT_INPUT); valTax.setHorizontalAlignment(JLabel.RIGHT); valTax.setBounds(200, 330, 140, 20);
-        slipCard.add(valTax);
-
-        JSeparator sep3 = new JSeparator();
-        sep3.setBounds(30, 370, 320, 2);
-        slipCard.add(sep3);
-
-        JLabel vTotal = new JLabel("TOTAL AMOUNT:");
-        vTotal.setFont(new Font("Segoe UI", Font.BOLD, 15)); vTotal.setForeground(COLOR_ACCENT); vTotal.setBounds(40, 390, 140, 25);
-        slipCard.add(vTotal);
-        JLabel valTotal = new JLabel("-");
-        valTotal.setFont(new Font("Segoe UI", Font.BOLD, 16)); valTotal.setForeground(COLOR_ACCENT); valTotal.setHorizontalAlignment(JLabel.RIGHT); valTotal.setBounds(180, 390, 160, 25);
-        slipCard.add(valTotal);
-
-        cardWrapper.add(slipCard);
-        content.add(cardWrapper, BorderLayout.CENTER);
-
-        root.add(content, BorderLayout.CENTER);
-
-        // Fetch vacant action
-        btnCheck.addActionListener(e -> {
-            lblErr.setText("");
-            comboRooms.removeAllItems();
+        // ── Actions ──
+        btnFetch.addActionListener(e -> {
+            errLbl.setText(" ");
+            cboRooms.removeAllItems();
             btnConfirm.setEnabled(false);
             try {
-                HotelApp.RoomType rt = (HotelApp.RoomType) comboType.getSelectedItem();
-                LocalDate inDate = LocalDate.parse(txtCheckIn.getText().trim(), HotelApp.DTF);
-                LocalDate outDate = LocalDate.parse(txtCheckOut.getText().trim(), HotelApp.DTF);
-
-                if (!backend.validateDates(inDate, outDate)) {
-                    lblErr.setText("Check-out must be after check-in.");
-                    return;
-                }
-
-                List<HotelApp.Room> available = backend.findAvailableRooms(rt, inDate, outDate);
-                if (available.isEmpty()) {
-                    lblErr.setText("No vacancy for specified dates.");
-                } else {
-                    for (HotelApp.Room r : available) {
-                        comboRooms.addItem(r.number);
-                    }
-                    btnConfirm.setEnabled(true);
-                }
-            } catch (DateTimeParseException ex) {
-                lblErr.setText("Use date format: yyyy-MM-dd");
-            }
+                HotelApp.RoomType rt = (HotelApp.RoomType) cboType.getSelectedItem();
+                LocalDate in  = LocalDate.parse(txtIn.getText().trim(),  HotelApp.DTF);
+                LocalDate out = LocalDate.parse(txtOut.getText().trim(), HotelApp.DTF);
+                if (!backend.validateDates(in, out)) { errLbl.setText("Check-out must be after check-in."); return; }
+                List<HotelApp.Room> avail = backend.findAvailableRooms(rt, in, out);
+                if (avail.isEmpty()) { errLbl.setText("No rooms vacant for those dates."); return; }
+                avail.forEach(r -> cboRooms.addItem(r.number));
+                btnConfirm.setEnabled(true);
+            } catch (DateTimeParseException ex) { errLbl.setText("Date format: yyyy-MM-dd"); }
         });
 
-        // Booking confirmation action
         btnConfirm.addActionListener(e -> {
-            lblErr.setText("");
+            errLbl.setText(" ");
             String name = txtGuest.getText().trim();
-            if (name.isEmpty()) {
-                lblErr.setText("Guest name cannot be empty.");
-                return;
-            }
-
+            if (name.isEmpty()) { errLbl.setText("Guest name cannot be empty."); return; }
+            Integer roomNum = (Integer) cboRooms.getSelectedItem();
+            if (roomNum == null) { errLbl.setText("Please fetch available rooms first."); return; }
             try {
-                Integer roomNum = (Integer) comboRooms.getSelectedItem();
-                if (roomNum == null) {
-                    lblErr.setText("Please check vacant rooms first.");
+                HotelApp.RoomType rt = (HotelApp.RoomType) cboType.getSelectedItem();
+                LocalDate in  = LocalDate.parse(txtIn.getText().trim(),  HotelApp.DTF);
+                LocalDate out = LocalDate.parse(txtOut.getText().trim(), HotelApp.DTF);
+                // Re-validate overlap before confirming
+                List<HotelApp.Room> avail = backend.findAvailableRooms(rt, in, out);
+                if (avail.stream().noneMatch(r -> r.number == roomNum)) {
+                    errLbl.setText("Room no longer available. Please re-fetch.");
                     return;
                 }
+                HotelApp.Room chosen = backend.rooms.get(roomNum);
+                int bId = backend.nextBookingId++;
+                HotelApp.Booking b = new HotelApp.Booking(bId, chosen.number, name, in, out,
+                        chosen.type.nightlyRate(), HotelApp.TAX_RATE);
+                backend.bookings.put(bId, b);
 
-                LocalDate inDate = LocalDate.parse(txtCheckIn.getText().trim(), HotelApp.DTF);
-                LocalDate outDate = LocalDate.parse(txtCheckOut.getText().trim(), HotelApp.DTF);
+                // Populate voucher
+                vVals[0].setText(String.valueOf(b.id));
+                vVals[1].setText(b.guestName);
+                vVals[2].setText(String.valueOf(b.roomNumber));
+                vVals[3].setText(b.checkIn.format(HotelApp.DTF));
+                vVals[4].setText(b.checkOut.format(HotelApp.DTF));
+                vVals[5].setText(b.nights + " nights");
+                billVals[0].setText(backend.money(b.nightlyRate));
+                billVals[1].setText(backend.money(b.roomCharge));
+                billVals[2].setText(backend.money(b.tax));
+                totalVal.setText(backend.money(b.total));
 
-                // Double check overlap check
-                List<HotelApp.Room> freeList = backend.findAvailableRooms((HotelApp.RoomType) comboType.getSelectedItem(), inDate, outDate);
-                if (!freeList.stream().anyMatch(r -> r.number == roomNum)) {
-                    lblErr.setText("Room is no longer available.");
-                    return;
-                }
-
-                HotelApp.Room chosenRoom = backend.rooms.get(roomNum);
-                int bkgId = backend.nextBookingId++;
-                HotelApp.Booking booking = new HotelApp.Booking(bkgId, chosenRoom.number, name, inDate, outDate, chosenRoom.type.nightlyRate(), HotelApp.TAX_RATE);
-                backend.bookings.put(bkgId, booking);
-
-                // Populate slip card
-                valBkg.setText(String.valueOf(booking.id));
-                valGuest.setText(booking.guestName);
-                valRoom.setText(booking.roomNumber + " (" + chosenRoom.type.label + ")");
-                valDates.setText(booking.checkIn + " to " + booking.checkOut);
-                valNights.setText(booking.nights + " Nights");
-                valRate.setText(formatMoney(booking.nightlyRate));
-                valCharge.setText(formatMoney(booking.roomCharge));
-                valTax.setText(formatMoney(booking.tax));
-                valTotal.setText(formatMoney(booking.total));
-
-                lblErr.setText("Booking successful!");
-                lblErr.setForeground(COLOR_SUCCESS);
+                errLbl.setForeground(C_VACANT);
+                errLbl.setText("✓  Booking " + bId + " confirmed!");
                 btnConfirm.setEnabled(false);
             } catch (Exception ex) {
-                lblErr.setText("Execution failed. Check fields.");
-                lblErr.setForeground(COLOR_ERROR);
+                errLbl.setForeground(C_OCCUPIED);
+                errLbl.setText("Booking failed — check your inputs.");
             }
         });
 
         return root;
     }
 
-    // ----------- Screen 5: Manage Bookings Panel (View/Cancel/CheckIn/CheckOut) -----------
-    private JPanel createManageBookingPanel() {
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(COLOR_BG);
-        root.add(createHeaderPanel("Manage Reservations", "Search bookings by ID to perform check-in, check-out, and cancellation operations", "DASHBOARD"), BorderLayout.NORTH);
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCREEN 5 — MANAGE BOOKING (View / Cancel / Check-In / Check-Out)
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel buildManagePanel() {
+        JPanel root = screenWrapper();
+        root.add(pageHeader("Manage Booking", "View, cancel, check-in or check-out a reservation by Booking ID."), BorderLayout.NORTH);
 
-        JPanel content = new JPanel(new BorderLayout(20, 20));
-        content.setBackground(COLOR_BG);
-        content.setBorder(new EmptyBorder(10, 40, 40, 40));
+        JPanel body = new JPanel(new BorderLayout(20, 0));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(0, 32, 32, 32));
 
-        // Form lookup (Left)
-        JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(COLOR_CARD);
-        formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_BORDER, 1),
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        formCard.setPreferredSize(new Dimension(320, 400));
+        // ── Control Card ──
+        JPanel ctrlCard = card();
+        ctrlCard.setLayout(new BoxLayout(ctrlCard, BoxLayout.Y_AXIS));
+        ctrlCard.setPreferredSize(new Dimension(290, 0));
+        ctrlCard.setBorder(new CompoundBorder(ctrlCard.getBorder(), new EmptyBorder(24, 24, 24, 24)));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 15, 0);
+        ctrlCard.add(sectionLabel("Booking ID"));
+        ctrlCard.add(Box.createVerticalStrut(6));
+        JTextField txtId = styledField("e.g. 1001");
+        txtId.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        ctrlCard.add(txtId);
 
-        JLabel lblId = new JLabel("Enter Booking ID");
-        lblId.setFont(FONT_LABEL);
-        lblId.setForeground(COLOR_TEXT);
-        formCard.add(lblId, gbc);
+        ctrlCard.add(Box.createVerticalStrut(14));
+        JButton btnFind = accentButton("🔍  Find Booking");
+        btnFind.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnFind.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ctrlCard.add(btnFind);
 
-        gbc.gridy++;
-        JTextField txtId = createStyledTextField("e.g. 1001");
-        formCard.add(txtId, gbc);
-
-        gbc.gridy++;
-        JButton btnFind = createPrimaryButton("Find Booking Details");
-        formCard.add(btnFind, gbc);
-
-        gbc.gridy++;
+        ctrlCard.add(Box.createVerticalStrut(20));
         JSeparator sep = new JSeparator();
-        formCard.add(sep, gbc);
+        sep.setForeground(C_BORDER);
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        ctrlCard.add(sep);
+        ctrlCard.add(Box.createVerticalStrut(16));
 
-        // Context Action Buttons
-        gbc.gridy++;
-        JButton btnCheckIn = createSecondaryButton("Check In Guest");
-        btnCheckIn.setEnabled(false);
-        formCard.add(btnCheckIn, gbc);
+        JLabel actionsLbl = new JLabel("ACTIONS");
+        actionsLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        actionsLbl.setForeground(C_MUTED);
+        ctrlCard.add(actionsLbl);
+        ctrlCard.add(Box.createVerticalStrut(10));
 
-        gbc.gridy++;
-        JButton btnCheckOut = createSecondaryButton("Check Out Guest & Print Bill");
-        btnCheckOut.setEnabled(false);
-        formCard.add(btnCheckOut, gbc);
+        JButton btnCheckIn  = ghostButton("✈  Check In Guest");
+        JButton btnCheckOut = ghostButton("🏁  Check Out & Bill");
+        JButton btnCancel   = dangerButton("✖  Cancel Booking");
 
-        gbc.gridy++;
-        JButton btnCancel = createSecondaryButton("Cancel Booking");
-        btnCancel.setEnabled(false);
-        formCard.add(btnCancel, gbc);
+        for (JButton b : new JButton[]{btnCheckIn, btnCheckOut, btnCancel}) {
+            b.setEnabled(false);
+            b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            ctrlCard.add(b);
+            ctrlCard.add(Box.createVerticalStrut(8));
+        }
 
-        gbc.gridy++;
-        JLabel lblErr = new JLabel();
-        lblErr.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblErr.setForeground(COLOR_ERROR);
-        formCard.add(lblErr, gbc);
+        ctrlCard.add(Box.createVerticalStrut(4));
+        JLabel errLbl = errorLabel();
+        ctrlCard.add(errLbl);
+        ctrlCard.add(Box.createVerticalGlue());
 
-        content.add(formCard, BorderLayout.WEST);
+        // ── Detail / Receipt Card ──
+        JPanel detailCard = card();
+        detailCard.setLayout(new BorderLayout());
 
-        // Details Display Card (Right)
-        JPanel cardWrapper = new JPanel(new GridBagLayout());
-        cardWrapper.setBackground(COLOR_BG);
+        JPanel detailHeader = new JPanel();
+        detailHeader.setBackground(C_NAVY);
+        detailHeader.setBorder(new EmptyBorder(18, 20, 18, 20));
+        detailHeader.setLayout(new BoxLayout(detailHeader, BoxLayout.Y_AXIS));
+        JLabel dtTitle = new JLabel("BOOKING RECORD");
+        dtTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        dtTitle.setForeground(Color.WHITE);
+        JLabel dtSub = new JLabel("Reservation details and billing summary");
+        dtSub.setFont(F_SMALL);
+        dtSub.setForeground(new Color(0xA0AEC0));
+        detailHeader.add(dtTitle);
+        detailHeader.add(Box.createVerticalStrut(4));
+        detailHeader.add(dtSub);
+        detailCard.add(detailHeader, BorderLayout.NORTH);
 
-        JPanel detailCard = new JPanel(null);
-        detailCard.setBackground(COLOR_CARD);
-        detailCard.setPreferredSize(new Dimension(380, 480));
-        detailCard.setBorder(BorderFactory.createLineBorder(COLOR_BORDER, 1));
+        // Detail body
+        JPanel dtBody = new JPanel();
+        dtBody.setBackground(C_CARD);
+        dtBody.setLayout(new BoxLayout(dtBody, BoxLayout.Y_AXIS));
+        dtBody.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        JLabel lblDetailTitle = new JLabel("BOOKING DOCUMENTATION", JLabel.CENTER);
-        lblDetailTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        lblDetailTitle.setBounds(0, 30, 380, 25);
-        detailCard.add(lblDetailTitle);
+        String[] dtKeys = {"Booking ID","Status","Guest Name","Room No.","Check-In","Check-Out","Nights"};
+        JLabel[] dtVals = new JLabel[dtKeys.length];
+        for (int i = 0; i < dtKeys.length; i++) {
+            JPanel row = new JPanel(new BorderLayout());
+            row.setOpaque(false);
+            row.setBorder(new EmptyBorder(4, 0, 4, 0));
+            JLabel k = new JLabel(dtKeys[i]);
+            k.setFont(F_SMALL);
+            k.setForeground(C_MUTED);
+            dtVals[i] = new JLabel("—");
+            dtVals[i].setFont(i == 1 ? new Font("Segoe UI", Font.BOLD, 13) : F_BODY);
+            dtVals[i].setForeground(C_TEXT);
+            row.add(k, BorderLayout.WEST);
+            row.add(dtVals[i], BorderLayout.EAST);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            dtBody.add(row);
+        }
 
-        JSeparator sepVoucher = new JSeparator();
-        sepVoucher.setBounds(30, 70, 320, 2);
-        detailCard.add(sepVoucher);
+        dtBody.add(Box.createVerticalStrut(8));
+        JSeparator sep2 = new JSeparator(); sep2.setForeground(C_BORDER);
+        sep2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        dtBody.add(sep2);
+        dtBody.add(Box.createVerticalStrut(8));
 
-        // Labels
-        JLabel dId = new JLabel("Booking ID:"); dId.setFont(FONT_LABEL); dId.setBounds(40, 95, 100, 20); detailCard.add(dId);
-        JLabel valId = new JLabel("-"); valId.setFont(FONT_INPUT); valId.setBounds(160, 95, 180, 20); detailCard.add(valId);
+        String[] billKeys = {"Nightly Rate","Room Charge","Tax (10%)"};
+        JLabel[] billVals = new JLabel[3];
+        for (int i = 0; i < 3; i++) {
+            JPanel row = new JPanel(new BorderLayout());
+            row.setOpaque(false);
+            row.setBorder(new EmptyBorder(3, 0, 3, 0));
+            JLabel k = new JLabel(billKeys[i]);
+            k.setFont(F_SMALL);
+            k.setForeground(C_MUTED);
+            billVals[i] = new JLabel("—");
+            billVals[i].setFont(F_BODY);
+            billVals[i].setForeground(C_TEXT);
+            row.add(k, BorderLayout.WEST);
+            row.add(billVals[i], BorderLayout.EAST);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+            dtBody.add(row);
+        }
+        dtBody.add(Box.createVerticalStrut(10));
 
-        JLabel dStatus = new JLabel("Booking Status:"); dStatus.setFont(FONT_LABEL); dStatus.setBounds(40, 125, 100, 20); detailCard.add(dStatus);
-        JLabel valStatus = new JLabel("-"); valStatus.setFont(new Font("Segoe UI", Font.BOLD, 14)); valStatus.setBounds(160, 125, 180, 20); detailCard.add(valStatus);
+        JPanel totalRow = new JPanel(new BorderLayout());
+        totalRow.setBackground(new Color(0xFFFBEB));
+        totalRow.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xFDE68A), 1),
+                new EmptyBorder(10, 14, 10, 14)
+        ));
+        JLabel totalKey = new JLabel("TOTAL AMOUNT");
+        totalKey.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalKey.setForeground(C_NAVY);
+        JLabel totalVal = new JLabel("—");
+        totalVal.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        totalVal.setForeground(C_AMBER);
+        totalRow.add(totalKey, BorderLayout.WEST);
+        totalRow.add(totalVal, BorderLayout.EAST);
+        totalRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        dtBody.add(totalRow);
 
-        JLabel dGuest = new JLabel("Guest Name:"); dGuest.setFont(FONT_LABEL); dGuest.setBounds(40, 155, 100, 20); detailCard.add(dGuest);
-        JLabel valGuest = new JLabel("-"); valGuest.setFont(FONT_INPUT); valGuest.setBounds(160, 155, 180, 20); detailCard.add(valGuest);
+        detailCard.add(dtBody, BorderLayout.CENTER);
 
-        JLabel dRoom = new JLabel("Room Selected:"); dRoom.setFont(FONT_LABEL); dRoom.setBounds(40, 185, 100, 20); detailCard.add(dRoom);
-        JLabel valRoom = new JLabel("-"); valRoom.setFont(FONT_INPUT); valRoom.setBounds(160, 185, 180, 20); detailCard.add(valRoom);
+        body.add(ctrlCard,   BorderLayout.WEST);
+        body.add(detailCard, BorderLayout.CENTER);
+        root.add(body, BorderLayout.CENTER);
 
-        JLabel dDates = new JLabel("Stay Dates:"); dDates.setFont(FONT_LABEL); dDates.setBounds(40, 215, 100, 20); detailCard.add(dDates);
-        JLabel valDates = new JLabel("-"); valDates.setFont(FONT_INPUT); valDates.setBounds(160, 215, 180, 20); detailCard.add(valDates);
-
-        JLabel dNights = new JLabel("Total Nights:"); dNights.setFont(FONT_LABEL); dNights.setBounds(40, 245, 100, 20); detailCard.add(dNights);
-        JLabel valNights = new JLabel("-"); valNights.setFont(FONT_INPUT); valNights.setBounds(160, 245, 180, 20); detailCard.add(valNights);
-
-        JSeparator sepVoucher2 = new JSeparator();
-        sepVoucher2.setBounds(30, 285, 320, 2);
-        detailCard.add(sepVoucher2);
-
-        JLabel dRate = new JLabel("Nightly Rate:"); dRate.setFont(FONT_LABEL); dRate.setBounds(40, 310, 120, 20); detailCard.add(dRate);
-        JLabel valRate = new JLabel("-"); valRate.setFont(FONT_INPUT); valRate.setHorizontalAlignment(JLabel.RIGHT); valRate.setBounds(200, 310, 140, 20); detailCard.add(valRate);
-
-        JLabel dCharge = new JLabel("Room Cost:"); dCharge.setFont(FONT_LABEL); dCharge.setBounds(40, 340, 120, 20); detailCard.add(dCharge);
-        JLabel valCharge = new JLabel("-"); valCharge.setFont(FONT_INPUT); valCharge.setHorizontalAlignment(JLabel.RIGHT); valCharge.setBounds(200, 340, 140, 20); detailCard.add(valCharge);
-
-        JLabel dTax = new JLabel("Tax Charge (10%):"); dTax.setFont(FONT_LABEL); dTax.setBounds(40, 370, 120, 20); detailCard.add(dTax);
-        JLabel valTax = new JLabel("-"); valTax.setFont(FONT_INPUT); valTax.setHorizontalAlignment(JLabel.RIGHT); valTax.setBounds(200, 370, 140, 20); detailCard.add(valTax);
-
-        JSeparator sepVoucher3 = new JSeparator();
-        sepVoucher3.setBounds(30, 405, 320, 2);
-        detailCard.add(sepVoucher3);
-
-        JLabel dTotal = new JLabel("NET TOTAL BILL:"); dTotal.setFont(new Font("Segoe UI", Font.BOLD, 15)); dTotal.setForeground(COLOR_ACCENT); dTotal.setBounds(40, 420, 140, 25); detailCard.add(dTotal);
-        JLabel valTotal = new JLabel("-"); valTotal.setFont(new Font("Segoe UI", Font.BOLD, 16)); valTotal.setForeground(COLOR_ACCENT); valTotal.setHorizontalAlignment(JLabel.RIGHT); valTotal.setBounds(180, 420, 160, 25); detailCard.add(valTotal);
-
-        cardWrapper.add(detailCard);
-        content.add(cardWrapper, BorderLayout.CENTER);
-
-        root.add(content, BorderLayout.CENTER);
-
-        // Find Logic
+        // ── Find logic ──
         btnFind.addActionListener(e -> {
-            lblErr.setText("");
-            lblErr.setForeground(COLOR_ERROR);
-            btnCheckIn.setEnabled(false);
-            btnCheckOut.setEnabled(false);
-            btnCancel.setEnabled(false);
-
+            errLbl.setText(" "); errLbl.setForeground(C_OCCUPIED);
+            btnCheckIn.setEnabled(false); btnCheckOut.setEnabled(false); btnCancel.setEnabled(false);
+            for (JLabel l : dtVals)   l.setText("—");
+            for (JLabel l : billVals) l.setText("—");
+            totalVal.setText("—");
             try {
                 int id = Integer.parseInt(txtId.getText().trim());
                 HotelApp.Booking b = backend.bookings.get(id);
-                if (b == null) {
-                    lblErr.setText("Booking ID not found.");
-                    clearDetailsCard(valId, valStatus, valGuest, valRoom, valDates, valNights, valRate, valCharge, valTax, valTotal);
-                    return;
-                }
-
-                // Render fields
+                if (b == null) { errLbl.setText("No booking found for ID " + id + "."); return; }
                 HotelApp.Room r = backend.rooms.get(b.roomNumber);
-                valId.setText(String.valueOf(b.id));
-                valStatus.setText(b.status.name());
-                if (b.status == HotelApp.BookingStatus.RESERVED) valStatus.setForeground(Color.ORANGE);
-                else if (b.status == HotelApp.BookingStatus.IN_HOUSE) valStatus.setForeground(COLOR_SUCCESS);
-                else valStatus.setForeground(COLOR_SECONDARY);
 
-                valGuest.setText(b.guestName);
-                valRoom.setText(b.roomNumber + " (" + r.type.label + ")");
-                valDates.setText(b.checkIn + " to " + b.checkOut);
-                valNights.setText(b.nights + " Nights");
-                valRate.setText(formatMoney(b.nightlyRate));
-                valCharge.setText(formatMoney(b.roomCharge));
-                valTax.setText(formatMoney(b.tax));
-                valTotal.setText(formatMoney(b.total));
+                dtVals[0].setText(String.valueOf(b.id));
+                dtVals[1].setText(b.status.name());
+                dtVals[1].setForeground(
+                        b.status == HotelApp.BookingStatus.RESERVED  ? C_AMBER  :
+                        b.status == HotelApp.BookingStatus.IN_HOUSE  ? C_VACANT :
+                        b.status == HotelApp.BookingStatus.COMPLETED ? C_MUTED  : C_OCCUPIED);
+                dtVals[2].setText(b.guestName);
+                dtVals[3].setText(String.valueOf(b.roomNumber));
+                dtVals[4].setText(b.checkIn.format(HotelApp.DTF));
+                dtVals[5].setText(b.checkOut.format(HotelApp.DTF));
+                dtVals[6].setText(b.nights + " nights");
+                billVals[0].setText(backend.money(b.nightlyRate));
+                billVals[1].setText(backend.money(b.roomCharge));
+                billVals[2].setText(backend.money(b.tax));
+                totalVal.setText(backend.money(b.total));
 
-                // Configure context buttons
-                if (b.status == HotelApp.BookingStatus.RESERVED) {
-                    btnCheckIn.setEnabled(true);
-                    btnCancel.setEnabled(true);
-                } else if (b.status == HotelApp.BookingStatus.IN_HOUSE) {
-                    btnCheckOut.setEnabled(true);
-                }
-            } catch (NumberFormatException ex) {
-                lblErr.setText("Please enter a numeric ID.");
-            }
+                if (b.status == HotelApp.BookingStatus.RESERVED)  { btnCheckIn.setEnabled(true);  btnCancel.setEnabled(true); }
+                if (b.status == HotelApp.BookingStatus.IN_HOUSE)  { btnCheckOut.setEnabled(true); }
+                errLbl.setForeground(C_VACANT);
+                errLbl.setText("✓  Booking loaded.");
+            } catch (NumberFormatException ex) { errLbl.setText("Please enter a numeric booking ID."); }
         });
 
-        // Check In logic
         btnCheckIn.addActionListener(e -> {
-            int id = Integer.parseInt(valId.getText());
+            int id = Integer.parseInt(txtId.getText().trim());
             HotelApp.Booking b = backend.bookings.get(id);
-            HotelApp.Room r = backend.rooms.get(b.roomNumber);
-
-            if (r.status != HotelApp.RoomStatus.VACANT) {
-                lblErr.setText("Selected room is not vacant.");
-                return;
-            }
-
+            HotelApp.Room    r = backend.rooms.get(b.roomNumber);
+            if (r.status != HotelApp.RoomStatus.VACANT) { errLbl.setText("Room is not vacant."); return; }
             b.status = HotelApp.BookingStatus.IN_HOUSE;
             r.status = HotelApp.RoomStatus.OCCUPIED;
-            valStatus.setText(b.status.name());
-            valStatus.setForeground(COLOR_SUCCESS);
-            lblErr.setText("Checked in. Room status updated.");
-            lblErr.setForeground(COLOR_SUCCESS);
-
-            btnCheckIn.setEnabled(false);
-            btnCancel.setEnabled(false);
-            btnCheckOut.setEnabled(true);
+            dtVals[1].setText("IN_HOUSE"); dtVals[1].setForeground(C_VACANT);
+            errLbl.setForeground(C_VACANT); errLbl.setText("✓  Guest checked in!");
+            btnCheckIn.setEnabled(false); btnCancel.setEnabled(false); btnCheckOut.setEnabled(true);
         });
 
-        // Cancel logic
         btnCancel.addActionListener(e -> {
-            int id = Integer.parseInt(valId.getText());
+            int id = Integer.parseInt(txtId.getText().trim());
             HotelApp.Booking b = backend.bookings.get(id);
             b.status = HotelApp.BookingStatus.CANCELLED;
-            valStatus.setText(b.status.name());
-            valStatus.setForeground(COLOR_SECONDARY);
-            lblErr.setText("Booking cancelled.");
-            lblErr.setForeground(COLOR_SUCCESS);
-
-            btnCheckIn.setEnabled(false);
-            btnCancel.setEnabled(false);
+            dtVals[1].setText("CANCELLED"); dtVals[1].setForeground(C_OCCUPIED);
+            errLbl.setForeground(C_VACANT); errLbl.setText("✓  Booking cancelled.");
+            btnCheckIn.setEnabled(false); btnCancel.setEnabled(false);
         });
 
-        // Check out logic
         btnCheckOut.addActionListener(e -> {
-            int id = Integer.parseInt(valId.getText());
+            int id = Integer.parseInt(txtId.getText().trim());
             HotelApp.Booking b = backend.bookings.get(id);
-            HotelApp.Room r = backend.rooms.get(b.roomNumber);
-
+            HotelApp.Room    r = backend.rooms.get(b.roomNumber);
             b.status = HotelApp.BookingStatus.COMPLETED;
             r.status = HotelApp.RoomStatus.VACANT;
-
-            valStatus.setText(b.status.name());
-            valStatus.setForeground(COLOR_SECONDARY);
-            lblErr.setText("Checked out successfully.");
-            lblErr.setForeground(COLOR_SUCCESS);
-
+            dtVals[1].setText("COMPLETED"); dtVals[1].setForeground(C_MUTED);
+            errLbl.setForeground(C_VACANT); errLbl.setText("✓  Checked out. Bill shown on the right.");
             btnCheckOut.setEnabled(false);
         });
 
         return root;
     }
 
-    private void clearDetailsCard(JLabel... labels) {
-        for (JLabel l : labels) {
-            l.setText("-");
-            l.setForeground(COLOR_TEXT);
+    // ═════════════════════════════════════════════════════════════════════════
+    // COMPONENT HELPERS
+    // ═════════════════════════════════════════════════════════════════════════
+    private JPanel screenWrapper() {
+        JPanel p = new JPanel(new BorderLayout(0, 0));
+        p.setBackground(C_BG);
+        return p;
+    }
+
+    private JPanel pageHeader(String title, String subtitle) {
+        JPanel hdr = new JPanel();
+        hdr.setBackground(C_BG);
+        hdr.setLayout(new BoxLayout(hdr, BoxLayout.Y_AXIS));
+        hdr.setBorder(new EmptyBorder(32, 32, 20, 32));
+
+        JLabel t = new JLabel(title);
+        t.setFont(F_HEADING);
+        t.setForeground(C_TEXT);
+        t.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel s = new JLabel(subtitle);
+        s.setFont(F_BODY);
+        s.setForeground(C_MUTED);
+        s.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        hdr.add(t);
+        hdr.add(Box.createVerticalStrut(4));
+        hdr.add(s);
+        hdr.add(Box.createVerticalStrut(8));
+
+        JSeparator sep = new JSeparator();
+        sep.setForeground(C_BORDER);
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        hdr.add(sep);
+
+        return hdr;
+    }
+
+    private JPanel card() {
+        JPanel p = new JPanel();
+        p.setBackground(C_CARD);
+        p.setBorder(BorderFactory.createLineBorder(C_BORDER, 1));
+        return p;
+    }
+
+    private JLabel sectionLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        l.setForeground(C_TEXT);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
+    }
+
+    private JLabel errorLabel() {
+        JLabel l = new JLabel(" ");
+        l.setFont(F_SMALL);
+        l.setForeground(C_OCCUPIED);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
+    }
+
+    private JTextField styledField(String placeholder) {
+        JTextField f = new JTextField(placeholder);
+        f.setFont(F_BODY);
+        f.setForeground(C_TEXT);
+        f.setBackground(Color.WHITE);
+        f.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C_BORDER, 1),
+                new EmptyBorder(6, 10, 6, 10)
+        ));
+        f.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return f;
+    }
+
+    private <T> JComboBox<T> styledCombo(T[] items) {
+        JComboBox<T> cb = new JComboBox<>(items);
+        cb.setFont(F_BODY);
+        cb.setBackground(Color.WHITE);
+        cb.setBorder(BorderFactory.createLineBorder(C_BORDER, 1));
+        cb.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return cb;
+    }
+
+    /** Solid amber accent button */
+    private JButton accentButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? C_AMBER_DARK : C_AMBER);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(F_BTN);
+        btn.setForeground(Color.WHITE);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(10, 18, 10, 18));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return btn;
+    }
+
+    /** Outlined ghost button (navy border, no fill) */
+    private JButton ghostButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(0xEFF6FF) : C_CARD);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.setColor(C_NAVY);
+                g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(F_BTN);
+        btn.setForeground(C_NAVY);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(8, 14, 8, 14));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return btn;
+    }
+
+    /** Red danger button for cancel action */
+    private JButton dangerButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(0xDC2626) : C_OCCUPIED);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(F_BTN);
+        btn.setForeground(Color.WHITE);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(8, 14, 8, 14));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return btn;
+    }
+
+    /** Clean styled JTable */
+    private JTable styledTable(DefaultTableModel model) {
+        JTable table = new JTable(model) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        table.setFont(F_BODY);
+        table.setRowHeight(40);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(C_BORDER);
+        table.setBackground(C_CARD);
+        table.setSelectionBackground(new Color(0xFFF3CD));
+        table.setSelectionForeground(C_TEXT);
+        table.setFillsViewportHeight(true);
+
+        JTableHeader hdr = table.getTableHeader();
+        hdr.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        hdr.setBackground(new Color(0xF8F9FA));
+        hdr.setForeground(C_MUTED);
+        hdr.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, C_BORDER));
+        hdr.setReorderingAllowed(false);
+
+        // Default cell renderer (alternating rows + padding)
+        DefaultTableCellRenderer dcr = new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(
+                    JTable t, Object val, boolean sel, boolean foc, int row, int col) {
+                super.getTableCellRendererComponent(t, val, sel, foc, row, col);
+                setBorder(new EmptyBorder(0, 12, 0, 12));
+                if (!sel) setBackground(row % 2 == 0 ? C_CARD : new Color(0xFAFAFC));
+                setForeground(C_TEXT);
+                return this;
+            }
+        };
+        table.setDefaultRenderer(Object.class, dcr);
+        return table;
+    }
+
+    /** Styled scroll pane */
+    private JScrollPane styledScroll(JTable table) {
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.getViewport().setBackground(C_CARD);
+        return scroll;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // CUSTOM CELL RENDERERS — Status & Type Pills
+    // ═════════════════════════════════════════════════════════════════════════
+    static class StatusPillRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(
+                JTable table, Object value, boolean selected, boolean focused, int row, int col) {
+            JLabel lbl = new JLabel(String.valueOf(value));
+            lbl.setHorizontalAlignment(JLabel.CENTER);
+            lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lbl.setBorder(new EmptyBorder(0, 12, 0, 12));
+            lbl.setOpaque(true);
+
+            String s = String.valueOf(value).trim();
+            switch (s) {
+                case "VACANT"          -> { lbl.setBackground(new Color(0xD1FAE5)); lbl.setForeground(new Color(0x065F46)); }
+                case "OCCUPIED"        -> { lbl.setBackground(new Color(0xFEE2E2)); lbl.setForeground(new Color(0x991B1B)); }
+                case "OUT_OF_SERVICE"  -> { lbl.setBackground(new Color(0xF3F4F6)); lbl.setForeground(new Color(0x6B7280)); }
+                default                -> { lbl.setBackground(new Color(0xF3F4F6)); lbl.setForeground(C_MUTED); }
+            }
+
+            JPanel wrapper = new JPanel(new GridBagLayout());
+            wrapper.setBackground(selected ? new Color(0xFFF3CD) : (row % 2 == 0 ? Color.WHITE : new Color(0xFAFAFC)));
+            wrapper.add(lbl);
+            return wrapper;
         }
     }
 
-    // ----------- App Launcher -----------
+    static class TypePillRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(
+                JTable table, Object value, boolean selected, boolean focused, int row, int col) {
+            JLabel lbl = new JLabel(String.valueOf(value));
+            lbl.setHorizontalAlignment(JLabel.CENTER);
+            lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lbl.setBorder(new EmptyBorder(0, 12, 0, 12));
+            lbl.setOpaque(true);
+
+            String s = String.valueOf(value).trim();
+            switch (s) {
+                case "Single" -> { lbl.setBackground(new Color(0xDBEAFE)); lbl.setForeground(new Color(0x1E40AF)); }
+                case "Double" -> { lbl.setBackground(new Color(0xEDE9FE)); lbl.setForeground(new Color(0x5B21B6)); }
+                case "Suite"  -> { lbl.setBackground(new Color(0xFEF3C7)); lbl.setForeground(new Color(0x92400E)); }
+                default       -> { lbl.setBackground(new Color(0xF3F4F6)); lbl.setForeground(C_MUTED); }
+            }
+
+            JPanel wrapper = new JPanel(new GridBagLayout());
+            wrapper.setBackground(selected ? new Color(0xFFF3CD) : (row % 2 == 0 ? Color.WHITE : new Color(0xFAFAFC)));
+            wrapper.add(lbl);
+            return wrapper;
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ENTRY POINT
+    // ═════════════════════════════════════════════════════════════════════════
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Apply a cleaner System look and feel if available
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored) {}
+            try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
+            catch (Exception ignored) {}
             new HotelAppGUI().setVisible(true);
         });
     }

@@ -88,10 +88,24 @@ javac src/HotelApp.java
 java -cp src HotelApp
 ```
 
-### Version 2 — Desktop GUI App (`src/HotelAppGUI.java`)
-A **bonus Java Swing desktop application** built on top of the console version's logic. Uses
-`CardLayout` for screen navigation, `JTable` for room grids, and custom-styled panels and buttons
-with an Apple-inspired light gray palette and blue accent colour `#007AFF`.
+### Version 2 — Colorful Dashboard GUI App (`src/HotelAppGUI.java`)
+A **professional Java Swing desktop application** with a modern SaaS-style dashboard design.
+Built on top of the console version's logic — no duplication of business rules.
+
+**Design palette:**
+- 🟦 **Deep Navy** `#1A2B4A` — sidebar with gradient, headers
+- 🟡 **Amber** `#F59E0B` — accent buttons, totals, active nav highlight
+- ⬜ **Light Gray** `#F0F2F5` — content area background
+- 🟢 / 🔴 **Emerald / Coral** — VACANT / OCCUPIED status pills
+
+**5 Screens (CardLayout — no popups):**
+| Screen | Description |
+|---|---|
+| 🏠 **Dashboard** | Sidebar nav + 3 stat cards (Total / Vacant / Occupied) + quick action cards |
+| 🏨 **View Rooms** | JTable with colored type pills (blue/purple/amber) and status badges |
+| 🔍 **Search** | Dropdown + date fields + results table with inline error labels |
+| ➕ **New Booking** | Form + room picker → live booking voucher card with amber total |
+| ⚙️ **Manage** | ID lookup → detail card → Check In / Check Out / Cancel buttons |
 
 **Run it with:**
 ```bash
@@ -99,9 +113,8 @@ javac src/HotelApp.java src/HotelAppGUI.java
 java -cp src HotelAppGUI
 ```
 
-> Both versions share the same `Room`, `Booking`, `RoomType`, and business logic classes.
-> The GUI directly calls the console version's availability checker and billing calculator —
-> there is zero duplication of business logic.
+> The GUI calls `backend.findAvailableRooms()`, `backend.money()`, and directly accesses
+> `backend.rooms` and `backend.bookings` — zero duplication of any business logic.
 
 ---
 
